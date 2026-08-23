@@ -1,0 +1,26 @@
+#secondary {
+
+	background: #fff;
+	padding: 2rem;
+
+	aside {
+		margin: 0 0 2rem 0;
+
+		.screen-reader-text { display: none; }
+
+		ul {
+			margin: 0;
+			li {
+				list-style-type: none; 
+			}
+		}
+
+		h1.widget-title {
+			color: #8cba00;
+			font-size: 1rem;
+			font-weight: normal;
+			letter-spacing: 4px;
+			text-transform: uppercase;
+		}
+	}
+}

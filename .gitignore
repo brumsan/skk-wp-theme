@@ -1,0 +1,46 @@
+# Deprecated & Build cache
+.sass-cache/
+.cache/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Theme specific ignores
+assets/components/
+
+# Compiled assets (Släpp kommentarerna nedan om minifierade filer ska exkluderas)
+# dist/
+# build/
+# *.min.css
+# *.min.js
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# Environment & Logs
+*.log
+.env
+.env.local
+.env.*.local
