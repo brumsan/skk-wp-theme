@@ -1,8 +1,8 @@
 // Load our plugins
 var	gulp				=	require('gulp'),
-	sass					=	require('gulp-sass'),  // Our sass compiler
+	sass					=	require('gulp-sass')(require('sass')),  // Our sass compiler
 	notify				=	require('gulp-notify'), // Basic gulp notificatin using OS
-	minifycss			=	require('gulp-minify-css'), // Minification
+	cleanCSS            = require('gulp-clean-css'), // Minification
 	rename				=	require('gulp-rename'), // Allows us to rename our css file prior to minifying
 	autoprefixer	=	require('gulp-autoprefixer'), // Adds vendor prefixes for us
 	browserSync		=	require('browser-sync'), // Sends php, js, img and css updates to browser for us
@@ -41,7 +41,7 @@ gulp.task('styles', function() {
 		.pipe(gulp.dest('./assets/dist/css')) // Location of our app.css file
 		.pipe(browserSync.reload({stream:true})) // CSS injection when app.css file is written
 		.pipe(rename({suffix: '.min'})) // Create a copy version of our compiled app.css file and name it app.min.css
-		.pipe(minifycss({
+		.pipe(cleanCSS({
 			keepSpecialComments:0
 		})) // Minify our newly copied app.min.css file
 		.pipe(gulp.dest('./assets/dist/css')) // Save app.min.css onto this directory
