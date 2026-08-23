@@ -5,247 +5,189 @@
  * @package Heisenberg
  */
 
-/**
- * Set the content width based on the theme's design and stylesheet.
- */
 if ( ! isset( $content_width ) ) {
-	$content_width = 640; /* pixels */
+    $content_width = 640;
 }
 
 if ( ! function_exists( 'heisenberg_setup' ) ) :
-/**
- * Sets up theme defaults and registers support for various WordPress features.
- */
-function heisenberg_setup() {
+    function heisenberg_setup() {
+        load_theme_textdomain( 'heisenberg', get_template_directory() . '/languages' );
 
-	/*
-	 * Make theme available for translation.
-	 */
-	load_theme_textdomain( 'heisenberg', get_template_directory() . '/languages' );
+        add_theme_support( 'automatic-feed-links' );
+        add_theme_support( 'title-tag' );
+        add_theme_support( 'post-thumbnails' );
+        set_post_thumbnail_size( 200, 200, true );
 
-	// Add default posts and comments RSS feed links to head.
-	add_theme_support( 'automatic-feed-links' );
+        register_nav_menus( array(
+            'primary' => __( 'Primary Menu', 'heisenberg' ),
+        ) );
 
-	/*
-	 * Let WordPress manage the document title.
-	 */
-	add_theme_support( 'title-tag' );
+        add_theme_support( 'html5', array(
+            'search-form',
+            'comment-form',
+            'comment-list',
+            'gallery',
+            'caption',
+            'script',
+            'style',
+        ) );
 
-	/*
-	 * Enable support for Post Thumbnails on posts and pages.
-	 */
-	add_theme_support( 'post-thumbnails' );
-	set_post_thumbnail_size( 200, 200, true );
+        add_theme_support( 'post-formats', array(
+            'aside', 'image', 'video', 'quote', 'link',
+        ) );
 
-	// Register primary menu location
-	register_nav_menus( array(
-		'primary' => __( 'Primary Menu', 'heisenberg' ),
-	) );
-
-	/*
-	 * Switch default core markup for search form, comment form, etc.
-	 */
-	add_theme_support( 'html5', array(
-		'search-form', 'comment-form', 'comment-list', 'gallery', 'caption',
-	) );
-
-	/*
-	 * Enable support for Post Formats.
-	 */
-	add_theme_support( 'post-formats', array(
-		'aside', 'image', 'video', 'quote', 'link',
-	) );
-
-	// Set up the WordPress core custom background feature.
-	add_theme_support( 'custom-background', apply_filters( 'heisenberg_custom_background_args', array(
-		'default-color' => 'ffffff',
-		'default-image' => '',
-	) ) );
-}
-endif; // heisenberg_setup
+        add_theme_support( 'custom-background', apply_filters( 'heisenberg_custom_background_args', array(
+            'default-color' => 'ffffff',
+            'default-image' => '',
+        ) ) );
+    }
+endif;
 add_action( 'after_setup_theme', 'heisenberg_setup' );
 
 /**
  * Register widget area.
  */
 function heisenberg_widgets_init() {
-	register_sidebar( array(
-		'name'          => __( 'Sidebar', 'heisenberg' ),
-		'id'            => 'sidebar-1',
-		'description'   => '',
-		'before_widget' => '<aside id="%1$s" class="widget %2$s">',
-		'after_widget'  => '</aside>',
-		'before_title'  => '<h1 class="widget-title">',
-		'after_title'   => '</h1>',
-	) );
+    register_sidebar( array(
+        'name'          => __( 'Sidebar', 'heisenberg' ),
+        'id'            => 'sidebar-1',
+        'description'   => '',
+        'before_widget' => '<aside id="%1$s" class="widget %2$s">',
+        'after_widget'  => '</aside>',
+        'before_title'  => '<h2 class="widget-title">',
+        'after_title'   => '</h2>',
+    ) );
 }
 add_action( 'widgets_init', 'heisenberg_widgets_init' );
 
 /**
- * Enqueue styles.
+ * Enqueue styles & scripts with dynamic cache-busting
  */
-if ( ! function_exists( 'heisenberg_styles' ) ) :
+function heisenberg_assets() {
+    $css_file = WP_DEBUG ? '/assets/dist/css/app.css' : '/assets/dist/css/app.min.css';
+    $js_file  = WP_DEBUG ? '/assets/dist/js/app.js'  : '/assets/dist/js/app.min.js';
 
-	function heisenberg_styles() {
+    $css_ver = file_exists( get_template_directory() . $css_file ) 
+        ? filemtime( get_template_directory() . $css_file ) 
+        : '1.0.0';
 
-		if ( WP_DEBUG ) :
-			wp_enqueue_style( 'heisenberg_styles', get_stylesheet_directory_uri() . '/assets/dist/css/app.css', '', '9' );
-		else :
-			wp_enqueue_style( 'heisenberg_styles', get_stylesheet_directory_uri() . '/assets/dist/css/app.min.css', '', '9' );
-		endif;
+    $js_ver  = file_exists( get_template_directory() . $js_file ) 
+        ? filemtime( get_template_directory() . $js_file ) 
+        : '1.0.0';
 
-	}
+    // Styles
+    wp_enqueue_style( 'heisenberg_styles', get_template_directory_uri() . $css_file, array(), $css_ver );
 
-	add_action( 'wp_enqueue_scripts', 'heisenberg_styles' );
+    // External dependencies
+    wp_enqueue_script( 'modernizr', get_template_directory_uri() . '/assets/components/modernizr/modernizr.js', array(), '2.8.3', false );
+    wp_enqueue_script( 'foundation-js', get_template_directory_uri() . '/assets/components/foundation/js/foundation.min.js', array( 'jquery' ), '5.5.3', true );
 
-endif;
+    // Main Compiled JS
+    wp_enqueue_script( 'heisenberg_appjs', get_template_directory_uri() . $js_file, array( 'jquery', 'foundation-js' ), $js_ver, true );
 
-/**
- * Enqueue scripts.
- */
-function heisenberg_scripts() {
+    wp_enqueue_script( 'heisenberg-navigation', get_template_directory_uri() . '/js/navigation.js', array(), '1.0.0', true );
+    wp_enqueue_script( 'heisenberg-skip-link-focus-fix', get_template_directory_uri() . '/js/skip-link-focus-fix.js', array(), '1.0.0', true );
 
-	wp_enqueue_script( 'modernizr', get_template_directory_uri() . '/assets/components/modernizr/modernizr.js', '', '', false );
-	wp_enqueue_script( 'fastclick_js', get_template_directory_uri() . '/assets/components/fastclick/lib/fastclick.js', '', '', true );
-	wp_enqueue_script( 'foundation-js', get_template_directory_uri() . '/assets/components/foundation/js/foundation.min.js', array( 'jquery' ), '5', true );
+    if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
+        wp_enqueue_script( 'comment-reply' );
+    }
 
-	if ( WP_DEBUG ) {
-		wp_enqueue_script( 'heisenberg_appjs', get_template_directory_uri() . '/assets/dist/js/app.js', array( 'jquery' ), '', true );
-	} else {
-		wp_enqueue_script( 'heisenberg_appjs', get_template_directory_uri() . '/assets/dist/js/app.min.js', array( 'jquery' ), '', true );
-	}
+    // Loadmore functionality on blog archive
+    if ( is_home() ) {
+        global $wp_query;
 
-	wp_enqueue_script( 'heisenberg-navigation', get_template_directory_uri() . '/js/navigation.js', array(), '20120206', true );
-	wp_enqueue_script( 'heisenberg-skip-link-focus-fix', get_template_directory_uri() . '/js/skip-link-focus-fix.js', array(), '20130115', true );
+        wp_enqueue_script( 'loadmore', get_template_directory_uri() . '/js/loadmore.js', array( 'jquery' ), '1.0.0', true );
 
-	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
-		wp_enqueue_script( 'comment-reply' );
-	}
+        $max   = $wp_query->max_num_pages;
+        $paged = ( get_query_var( 'paged' ) > 1 ) ? get_query_var( 'paged' ) : 1;
 
-	if ( is_home() ) {
-		global $wp_query;
-
-		$scriptsrc = get_template_directory_uri() . '/js/';
-
-		wp_register_script( 'loadmore', $scriptsrc . 'loadmore.js', array( 'jquery' ) );
-		wp_enqueue_script( 'loadmore' );
-
-		$max   = $wp_query->max_num_pages;
-		$paged = ( get_query_var( 'paged' ) > 1 ) ? get_query_var( 'paged' ) : 1;
-
-		wp_localize_script( 'loadmore', 'pbd_alp', array(
-			'startPage' => $paged,
-			'maxPages'  => $max,
-			'nextLink'  => next_posts( $max, false ),
-		) );
-	}
+        wp_localize_script( 'loadmore', 'pbd_alp', array(
+            'startPage' => $paged,
+            'maxPages'  => $max,
+            'nextLink'  => next_posts( $max, false ),
+        ) );
+    }
 }
-add_action( 'wp_enqueue_scripts', 'heisenberg_scripts' );
+add_action( 'wp_enqueue_scripts', 'heisenberg_assets' );
 
 /**
- * Custom template tags for this theme.
+ * Modular includes
  */
 require get_template_directory() . '/inc/template-tags.php';
-
-/**
- * Custom functions that act independently of the theme templates.
- */
 require get_template_directory() . '/inc/extras.php';
-
-/**
- * Customizer additions.
- */
 require get_template_directory() . '/inc/customizer.php';
 
-/**
- * Load Jetpack compatibility file.
- */
-require get_template_directory() . '/inc/jetpack.php';
-
-add_filter( 'wp_head', 'foundation_header' );
-
-function foundation_header() {
-	?>
-	<script type="text/javascript">
-		jQuery(document).ready(function($) {
-			$(document).foundation();
-		});
-	</script>
-	<?php
+if ( defined( 'JETPACK__VERSION' ) ) {
+    require get_template_directory() . '/inc/jetpack.php';
 }
 
 /**
- * Primary Menu
+ * Primary Menu Display Helper
  */
 function display_primary_menu() {
-	wp_nav_menu( array(
-		'theme_location' => 'primary',
-		'menu'           => 'Primary Menu',
-		'container'      => false,
-		'container_class'=> '',
-		'menu_class'     => 'top-bar-menu',
-		'before'          => '',
-		'after'           => '',
-		'link_before'     => '',
-		'link_after'      => '',
-		'depth'           => 5,
-		'fallback_cb'     => false,
-		'walker'          => new top_bar_walker(),
-	) );
+    wp_nav_menu( array(
+        'theme_location' => 'primary',
+        'menu'           => 'Primary Menu',
+        'container'      => false,
+        'menu_class'     => 'top-bar-menu',
+        'depth'          => 5,
+        'fallback_cb'    => false,
+        'walker'         => new top_bar_walker(),
+    ) );
 }
 
 /**
- * Customized menu output
+ * Customized menu output for Foundation Top Bar (PHP 8 compatible)
  */
 class top_bar_walker extends Walker_Nav_Menu {
-	function display_element( $element, &$children_elements, $max_depth, $depth = 0, $args = array(), &$output = '' ) {
-		$element->has_children = ! empty( $children_elements[ $element->ID ] );
-		$element->classes[]    = ( $element->current || $element->current_item_ancestor ) ? 'active' : '';
-		$element->classes[]    = ( $element->has_children ) ? 'has-dropdown not-click' : '';
-		parent::display_element( $element, $children_elements, $max_depth, $depth, $args, $output );
-	}
+    public function display_element( $element, &$children_elements, $max_depth, $depth = 0, $args = array(), &$output = '' ) {
+        $element->has_children = ! empty( $children_elements[ $element->ID ] );
+        $element->classes[]    = ( $element->current || $element->current_item_ancestor ) ? 'active' : '';
+        $element->classes[]    = ( $element->has_children ) ? 'has-dropdown not-click' : '';
+        parent::display_element( $element, $children_elements, $max_depth, $depth, $args, $output );
+    }
 
-	function start_el( &$output, $object, $depth = 0, $args = array(), $current_object_id = 0 ) {
-		$item_html = '';
-		parent::start_el( $item_html, $object, $depth, $args );
-		$output .= ( 0 == $depth ) ? '<li class="divider"></li>' : '';
-		$classes = empty( $object->classes ) ? array() : (array) $object->classes;
+    public function start_el( &$output, $data_object, $depth = 0, $args = null, $current_object_id = 0 ) {
+        $item_html = '';
+        parent::start_el( $item_html, $data_object, $depth, $args, $current_object_id );
+        
+        $output .= ( 0 === $depth ) ? '<li class="divider"></li>' : '';
+        $classes = empty( $data_object->classes ) ? array() : (array) $data_object->classes;
 
-		if ( in_array( 'label', $classes, true ) ) {
-			$output    .= '<li class="divider"></li>';
-			$item_html  = preg_replace( '/<a[^>]*>(.*)<\/a>/iU', '<label>$1</label>', $item_html );
-		}
+        if ( in_array( 'label', $classes, true ) ) {
+            $output    .= '<li class="divider"></li>';
+            $item_html  = preg_replace( '/<a[^>]*>(.*)<\/a>/iU', '<label>$1</label>', $item_html );
+        }
 
-		if ( in_array( 'divider', $classes, true ) ) {
-			$item_html = preg_replace( '/<a[^>]*>( .* )<\/a>/iU', '', $item_html );
-		}
+        if ( in_array( 'divider', $classes, true ) ) {
+            $item_html = preg_replace( '/<a[^>]*>( .* )<\/a>/iU', '', $item_html );
+        }
 
-		$output .= $item_html;
-	}
+        $output .= $item_html;
+    }
 
-	function start_lvl( &$output, $depth = 0, $args = array() ) {
-		$output .= "\n<ul class=\"sub-menu dropdown\">\n";
-	}
+    public function start_lvl( &$output, $depth = 0, $args = null ) {
+        $output .= "\n<ul class=\"sub-menu dropdown\">\n";
+    }
 }
 
 /**
- * Funktion som returnerar upp till 275 tecken och slutar pa ett helt ord "..."
+ * Safe Custom Excerpt Generator
  */
 function get_excerpt() {
-	$excerpt = get_the_content();
-	$excerpt = strip_shortcodes( $excerpt );
-	$excerpt = preg_replace( '~(\[.*?\])~', '', $excerpt );
-	$excerpt = wp_strip_all_tags( $excerpt );
+    $excerpt = get_the_content();
+    $excerpt = strip_shortcodes( $excerpt );
+    $excerpt = preg_replace( '~(\[.*?\])~', '', $excerpt );
+    $excerpt = wp_strip_all_tags( $excerpt );
 
-	if ( mb_strlen( $excerpt ) > 275 ) {
-		$excerpt = mb_substr( $excerpt, 0, 275 );
-		$last_space = mb_strrpos( $excerpt, ' ' );
-		if ( false !== $last_space ) {
-			$excerpt = mb_substr( $excerpt, 0, $last_space );
-		}
-		$excerpt = trim( preg_replace( '/\s+/', ' ', $excerpt ) );
-		return $excerpt . '...';
-	}
+    if ( mb_strlen( $excerpt ) > 275 ) {
+        $excerpt    = mb_substr( $excerpt, 0, 275 );
+        $last_space = mb_strrpos( $excerpt, ' ' );
+        if ( false !== $last_space ) {
+            $excerpt = mb_substr( $excerpt, 0, $last_space );
+        }
+        return trim( preg_replace( '/\s+/', ' ', $excerpt ) ) . '...';
+    }
 
-	return $excerpt;
+    return $excerpt;
 }
