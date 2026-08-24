@@ -1,4 +1,4 @@
-# Deprecated & Build cache
+# Node & Build cache
 .sass-cache/
 .cache/
 node_modules/
@@ -7,14 +7,18 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Theme specific ignores
-assets/components/
+# WordPress & Server specific logs
+*.log
+error_log
+.env
+.env.local
+.env.*.local
 
-# Compiled assets (Släpp kommentarerna nedan om minifierade filer ska exkluderas)
-# dist/
-# build/
-# *.min.css
-# *.min.js
+# Compiled assets (Se till att dessa INTE ignoreras om de behövs i prod)
+# assets/dist/ (Behåll utkommenterad så att CSS/JS skickas med till GitHub/HostGator)
+
+# Vendor dependencies (Kommentera UR om filerna i assets/components/ ska ligga i Git)
+# assets/components/
 
 # OS generated files
 .DS_Store
@@ -25,7 +29,7 @@ assets/components/
 ehthumbs.db
 Thumbs.db
 
-# IDE & Editor files
+# IDE & Editor files (Skyddar känsliga filer som sftp.json från att hamna på GitHub)
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -38,9 +42,3 @@ Thumbs.db
 *.sln
 *.swp
 *.swo
-
-# Environment & Logs
-*.log
-.env
-.env.local
-.env.*.local
