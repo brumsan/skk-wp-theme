@@ -78,7 +78,8 @@ function heisenberg_assets() {
     // Styles
     wp_enqueue_style( 'heisenberg_styles', get_template_directory_uri() . $css_file, array(), $css_ver );
 
-    // External dependencies
+    // External dependencies (Säkerställ inbyggt jQuery)
+    wp_enqueue_script( 'jquery' );
     wp_enqueue_script( 'modernizr', get_template_directory_uri() . '/assets/components/modernizr/modernizr.js', array(), '2.8.3', false );
     wp_enqueue_script( 'foundation-js', get_template_directory_uri() . '/assets/components/foundation/js/foundation.min.js', array( 'jquery' ), '5.5.3', true );
 
@@ -109,6 +110,15 @@ function heisenberg_assets() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'heisenberg_assets' );
+
+/**
+ * Force HTTPS and core jQuery in wp-admin to avoid Mixed Content / 403 blocks
+ */
+function skk_fix_admin_jquery_mixed_content() {
+    wp_deregister_script( 'jquery-cdn' );
+    wp_enqueue_script( 'jquery' );
+}
+add_action( 'admin_enqueue_scripts', 'skk_fix_admin_jquery_mixed_content', 1 );
 
 /**
  * Modular includes
@@ -172,10 +182,16 @@ class top_bar_walker extends Walker_Nav_Menu {
 }
 
 /**
- * Safe Custom Excerpt Generator
+ * Safe Custom Excerpt Generator (PHP 8 & null safe)
  */
-function get_excerpt() {
-    $excerpt = get_the_content();
+function get_excerpt( $post = null ) {
+    $post_obj = get_post( $post );
+
+    if ( ! $post_obj ) {
+        return '';
+    }
+
+    $excerpt = $post_obj->post_content;
     $excerpt = strip_shortcodes( $excerpt );
     $excerpt = preg_replace( '~(\[.*?\])~', '', $excerpt );
     $excerpt = wp_strip_all_tags( $excerpt );
