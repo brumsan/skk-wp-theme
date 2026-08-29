@@ -1,33 +1,35 @@
 <?php
+// Include wp-load 
+define('WP_USE_THEMES', false);  
+require_once('../../../wp-load.php');
 
-	// Include wp-load 
-	define('WP_USE_THEMES', false);  
-	require_once('../../../wp-load.php');
+// Variables from JS
+$numPosts = isset($_GET['numPosts']) ? intval($_GET['numPosts']) : 5;
+$page     = isset($_GET['pageNumber']) ? intval($_GET['pageNumber']) : 1;
+$category = isset($_GET['categoryName']) ? sanitize_text_field($_GET['categoryName']) : '';
 
-	//Variables from JS
-	if( isset($_GET['numPosts']) ) { 
-		$numPosts = $_GET['numPosts']; 
-	} else { $numPosts = 5; }
+$offset = $page * $numPosts;    
 
-	if( isset($_GET['pageNumber']) ) {
-		$page = $_GET['pageNumber'];
-	} else { $page = 1; }
+// The Query (använd array-syntax istället för query string för säkerhets skydd)
+$args = array(
+    'category_name'  => $category,
+    'posts_per_page' => $numPosts,
+    'offset'         => $offset,
+    'post_status'    => 'publish'
+);
 
-	if( isset($_GET['categoryName']) ) {
-		$category = $_GET['categoryName'];
-	} else { $category = ''; }
+$my_query = new WP_Query($args);
 
-	$offset = $page * $numPosts;	
+// The Loop
+global $post; // MÅSTE deklareras för att setup_postdata ska fungera korrekt
 
-	//The Query			
-	$my_query = new WP_Query('category_name='.$category.'&posts_per_page='.$numPosts.'&offset='.$offset);
+if ($my_query->have_posts()) :
+    while ($my_query->have_posts()) : $my_query->the_post();
+        
+        // Nu kommer hela partial-filen laddas exakt som på startsidan
+        get_template_part( 'page-templates/partials/content', 'frontpage' );
 
-	$posts = $my_query->get_posts();
-	
-	//The Loop
-	foreach ($posts as $post) {
-			setup_postdata( $post );
-			get_template_part( 'page-templates/partials/content', 'frontpage' );
-	}
-
-?>				
+    endwhile;
+    wp_reset_postdata(); // Återställ global postdata
+endif;
+?>
